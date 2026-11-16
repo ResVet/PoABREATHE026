@@ -1,6 +1,6 @@
 # PoA BREATHE 2026
 
-Situs panitia Point of Action 2026, Astramedika FK Universitas Sriwijaya. Isinya pengumuman penempatan panitia, susunan BPH dan divisi, tautan kerja, dan info lokasi CFD Monpera.
+Situs panitia Point of Action 2026, Astramedica FK Universitas Sriwijaya. Isinya pengumuman penempatan panitia, susunan BPH dan divisi, tautan kerja, dan info lokasi CFD Monpera.
 
 ## Mengganti isi
 

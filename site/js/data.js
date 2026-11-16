@@ -27,7 +27,7 @@ window.POA = {
     { name: "Azallea Sofwa Betha Dyero", role: "" },
     { name: "Shabirah Daffa Ramadhani", role: "Sekretaris" },
     { name: "Raffa Gamadan Rifandi", role: "Sekretaris" },
-    { name: "Putri Kayla Effendi", role: "Bendahara" },
+    { name: "Putri Kayla Efendi", role: "Bendahara" },
     { name: "Nailah Ansaria", role: "Bendahara" }
   ],
 

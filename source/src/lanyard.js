@@ -152,7 +152,7 @@ export function drawCardFront(ctx, p, W = TEX_W, H = TEX_H) {
   wave(ctx, 64 * u, W - 64 * u, by + 92 * u, 34 * u, HEX.sun, 5 * u);
   ctx.fillStyle = HEX.cream;
   setFont(ctx, 820, 'condensed', 64 * u, '"Anybody", sans-serif');
-  ctx.fillText('ASTRAMEDIKA', 64 * u, H - 120 * u);
+  ctx.fillText('ASTRAMEDICA', 64 * u, H - 120 * u);
   setFont(ctx, 500, '', 23 * u, '"Plex Mono", monospace');
   ctx.fillText('FK UNIVERSITAS SRIWIJAYA', 64 * u, H - 74 * u);
   ctx.textAlign = 'right';
@@ -197,7 +197,7 @@ function drawStrap(ctx, w, h) {
   ctx.fillStyle = HEX.cream;
   setFont(ctx, 500, '', 46, '"Plex Mono", monospace');
   ctx.textBaseline = 'middle';
-  ctx.fillText('POA BREATHE 2026  ·  ASTRAMEDIKA  ·', 6, 0);
+  ctx.fillText('POA BREATHE 2026  ·  ASTRAMEDICA  ·', 6, 0);
   ctx.restore();
 }
 
