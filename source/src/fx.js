@@ -49,15 +49,6 @@ export function initFx({ reduced, fine, scene }) {
     Promise.race([ready, new Promise((r) => setTimeout(r, 1400))]).then(runIntro);
   }
 
-  /* tickers */
-  const words = ['Tarik napas', 'Hembuskan', 'PoA BREATHE 2026', 'CFD Monpera', 'Astramedika'];
-  const tracks = $$('.ticker__track');
-  tracks.forEach((tr, k) => {
-    const seq = (k ? words.slice().reverse() : words).map((w) => `<span>${esc(w)}</span>${LUNG_ICON}`).join('');
-    tr.innerHTML = seq.repeat(4) + seq.repeat(4);
-  });
-  const tickX = tracks.map(() => 0);
-
   /* cursor follower (mouse only) */
   let cursor = null, cLabel = null, baseState = '', baseLabel = '', px = -200, py = -200, cx = -200, cy = -200;
   if (fine && motion) {
@@ -177,18 +168,6 @@ export function initFx({ reduced, fine, scene }) {
       if (bar) {
         const max = document.documentElement.scrollHeight - vh;
         bar.style.transform = `scaleX(${max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0})`;
-      }
-
-      // tickers
-      if (tracks.length) {
-        const speed = motion ? 42 + Math.min(900, Math.abs(vSmooth)) * 0.35 : 0;
-        tracks.forEach((tr, k) => {
-          const half = tr.scrollWidth / 2;
-          if (!half) return;
-          tickX[k] += (k ? 1 : -1) * dirSign * speed * dt;
-          tickX[k] = ((tickX[k] % half) + half) % half;
-          tr.style.transform = `translate3d(${(-tickX[k]).toFixed(1)}px,0,0)`;
-        });
       }
 
       // cursor

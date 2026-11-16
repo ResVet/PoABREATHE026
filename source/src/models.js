@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const PAL = {
-  coral: 0xe05744, tomato: 0xd52518, carrot: 0xf96015, sun: 0xffc828,
+  coral: 0xe05744, tomato: 0xd52518, carrot: 0xf96015, sun: 0xffc926,
   cream: 0xf3e8cc, forest: 0x18542a, kiwi: 0x9abc05, ink: 0x0e1b12,
 };
 
@@ -152,56 +152,86 @@ function tracheaGeometry() {
   return mergeGeometries(parts);
 }
 
-export function createLungs({ detail = 32 } = {}) {
+function airwayGeometry() {
+  const parts = [];
+  const tr = new THREE.CatmullRomCurve3([new V(0, 2.3, -0.02), new V(0, 1.7, 0.02), new V(0, 1.15, 0), new V(0, 0.82, -0.04)]);
+  const r = new THREE.CatmullRomCurve3([new V(0, 0.84, -0.04), new V(-0.38, 0.5, 0), new V(-0.72, 0.15, 0)]);
+  const l = new THREE.CatmullRomCurve3([new V(0, 0.84, -0.04), new V(0.44, 0.58, 0), new V(0.72, 0.17, 0)]);
+  parts.push(new THREE.TubeGeometry(tr, 40, 0.05, 10, false), new THREE.TubeGeometry(r, 20, 0.04, 10, false), new THREE.TubeGeometry(l, 20, 0.036, 10, false));
+  return mergeGeometries(parts);
+}
+
+export function createLungs({ detail = 32, lowEnd = false } = {}) {
   const root = new THREE.Group();
   const inner = new THREE.Group();
   inner.position.y = -0.47;
   root.add(inner);
-  const lungMat = new THREE.MeshPhysicalMaterial({
-    vertexColors: true, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.35,
-    sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xffc2a8), transparent: true,
-  });
   const uniforms = { uBreath: { value: 0 }, uRim: { value: new THREE.Color(0xffa58c) } };
-  lungMat.onBeforeCompile = (sh) => {
-    sh.uniforms.uBreath = uniforms.uBreath;
-    sh.uniforms.uRim = uniforms.uRim;
-    sh.vertexShader = 'uniform float uBreath;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      float wB = (1.0 - smoothstep(-1.25, 1.45, position.y)) * (0.55 + 0.45 * smoothstep(-0.6, 0.9, position.x));
-      transformed += objectNormal * (uBreath * 0.075 * wB);`);
-    sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.4);
-      totalEmissiveRadiance += uRim * fres * 0.42;`);
+  const breathe = (mat, rim) => {
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uBreath = uniforms.uBreath;
+      sh.uniforms.uRim = uniforms.uRim;
+      sh.vertexShader = 'uniform float uBreath;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        float wB = (1.0 - smoothstep(-1.25, 1.45, position.y)) * (0.55 + 0.45 * smoothstep(-0.6, 0.9, position.x));
+        transformed += objectNormal * (uBreath * 0.075 * wB);`);
+      if (rim) {
+        sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.4);
+          totalEmissiveRadiance += uRim * fres * 0.42;`);
+      }
+    };
+    mat.customProgramCacheKey = () => (rim ? 'lung-rim' : 'lung-glass');
   };
-  const treeMat = new THREE.MeshStandardMaterial({ color: PAL.sun, roughness: 0.35, emissive: PAL.carrot, emissiveIntensity: 0.15 });
-  const cartMat = new THREE.MeshPhysicalMaterial({ color: 0xf1e4d0, roughness: 0.45, clearcoat: 0.25, sheen: 0.5, sheenColor: new THREE.Color(0xffffff) });
+  const tissue = new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.35,
+    sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xffc2a8),
+  });
+  breathe(tissue, true);
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, roughness: 0.05, metalness: 0, transmission: 1, thickness: 0.9, ior: 1.42,
+    attenuationColor: new THREE.Color(0xffe0d4), attenuationDistance: 3.6,
+    iridescence: 0.4, iridescenceIOR: 1.3, iridescenceThicknessRange: [120, 480],
+    clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.7, dispersion: lowEnd ? 0 : 0.35,
+  });
+  breathe(glass, false);
+  const glow = new THREE.MeshStandardMaterial({ color: 0xffd27a, emissive: 0xff6a2e, emissiveIntensity: 2, roughness: 0.4 });
+  const cart = new THREE.MeshPhysicalMaterial({ color: 0xf1e4d0, roughness: 0.45, clearcoat: 0.25, sheen: 0.5, sheenColor: new THREE.Color(0xffffff) });
+  const cartGlass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.2, transmission: 1, thickness: 0.5, ior: 1.4, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1.4 });
 
-  const lungA = new THREE.Group(); // viewer-left, anatomical right
+  const lungA = new THREE.Group();
   lungA.position.set(-1.05, 0, 0);
-  const meshA = new THREE.Mesh(lungGeometry(detail, { horizontal: true }), lungMat);
-  const treeA = new THREE.Mesh(treeGeometry(7), treeMat);
+  const meshA = new THREE.Mesh(lungGeometry(detail, { horizontal: true }), glass);
+  const treeA = new THREE.Mesh(treeGeometry(7), glow);
   lungA.add(meshA, treeA);
-  const lungB = new THREE.Group(); // viewer-right, anatomical left
+  const lungB = new THREE.Group();
   lungB.position.set(1.05, 0, 0);
-  const meshB = new THREE.Mesh(lungGeometry(detail, { notch: true }), lungMat);
-  const treeB = new THREE.Mesh(treeGeometry(19), treeMat);
+  const meshB = new THREE.Mesh(lungGeometry(detail, { notch: true }), glass);
+  const treeB = new THREE.Mesh(treeGeometry(19), glow);
   lungB.add(meshB, treeB);
-  const trachea = new THREE.Mesh(tracheaGeometry(), cartMat);
-  inner.add(lungA, lungB, trachea);
-  treeA.visible = treeB.visible = false;
+  const trachea = new THREE.Mesh(tracheaGeometry(), cartGlass);
+  const airway = new THREE.Mesh(airwayGeometry(), glow);
+  inner.add(lungA, lungB, trachea, airway);
+
+  let mode = 'glass';
+  const apply = () => {
+    const g = mode === 'glass';
+    meshA.material = meshB.material = g ? glass : tissue;
+    trachea.material = g ? cartGlass : cart;
+    treeA.visible = treeB.visible = airway.visible = g;
+  };
+  apply();
 
   return {
-    root, nh: 3.85, nw: 4.2,
-    top: new V(0, 2.35 - 0.47, 0),
-    update(b, xray) {
+    root, nh: 3.85, nw: 4.2, meshes: [meshA, meshB],
+    setMode(m) { mode = m === 'tissue' ? 'tissue' : 'glass'; apply(); },
+    getMode() { return mode; },
+    update(b) {
       uniforms.uBreath.value = b;
       const sx = 1 + 0.02 * b, sy = 1 + 0.012 * b, sz = 1 + 0.02 * b;
       lungA.scale.set(-sx, sy, sz);
       lungB.scale.set(sx, sy, sz);
       lungA.position.y = lungB.position.y = -0.035 * b;
-      lungMat.opacity = 1 - 0.74 * xray;
-      lungMat.depthWrite = xray < 0.02;
-      treeA.visible = treeB.visible = xray > 0.02;
-      treeMat.emissiveIntensity = 0.12 + 0.3 * xray;
+      glow.emissiveIntensity = 1.5 + 1.4 * Math.min(1, b);
     },
   };
 }

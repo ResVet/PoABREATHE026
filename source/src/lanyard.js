@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-export const HEX = { coral: '#E05744', tomato: '#D52518', carrot: '#F96015', sun: '#FFC828', cream: '#F3E8CC', forest: '#18542A', kiwi: '#9ABC05', ink: '#0E1B12', paper: '#FBF4E4' };
+export const HEX = { coral: '#E05744', tomato: '#D52518', carrot: '#F96015', sun: '#FFC926', cream: '#F3E8CC', forest: '#18542A', kiwi: '#9ABC05', ink: '#0E1B12', paper: '#FBF4E4' };
 const LIGHT_TEXT_ON = new Set(['forest', 'tomato']);
 const TEX_W = 1024, TEX_H = 1620;
 const CARD_W = 1.24, CARD_H = (1.24 * TEX_H) / TEX_W;
@@ -286,7 +286,7 @@ export function initLanyard({ reduced }) {
       confetti = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.075, 0.13), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.5, metalness: 0.1 }), CN);
       confetti.frustumCulled = false;
       confetti.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      const cols = ['#E05744', '#FFC828', '#F96015', '#9ABC05', '#18542A', '#F3E8CC'].map((h) => new THREE.Color(h));
+      const cols = ['#E05744', '#FFC926', '#F96015', '#9ABC05', '#18542A', '#F3E8CC'].map((h) => new THREE.Color(h));
       for (let i = 0; i < CN; i++) {
         confetti.setColorAt(i, cols[i % cols.length]);
         conf.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Euler(), w: new THREE.Vector3(), ph: Math.random() * 6.28, live: false });

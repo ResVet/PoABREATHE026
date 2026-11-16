@@ -3,7 +3,7 @@ import { HEX } from './lanyard.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-const THEME_HEX = { paper: '#FBF4E4', coral: '#E05744', forest: '#18542A', sun: '#FFC828', tomato: '#D52518' };
+const THEME_HEX = { paper: '#081C10' };
 const LIGHT_TEXT_ON = new Set(['forest', 'tomato']);
 const M_FORMS = new Set(['m', 'muh', 'moh', 'mhd', 'muhamad', 'mohammad', 'mohamad', 'muhammed', 'mochammad', 'moch', 'mochamad']);
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -120,7 +120,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     html.dataset.theme = t;
     if (meta) meta.setAttribute('content', THEME_HEX[t] || THEME_HEX.paper);
   };
-  const navLinks = $$('#nav a');
+  const navLinks = $$('#nav a, .index a');
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return;
@@ -141,7 +141,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     xray.addEventListener('click', () => {
       const on = xray.getAttribute('aria-pressed') !== 'true';
       xray.setAttribute('aria-pressed', String(on));
-      xray.textContent = on ? 'Lihat bagian luar' : 'Lihat bagian dalam';
+      xray.textContent = on ? 'Tampilan: jaringan' : 'Tampilan: kaca';
       scene.setXray(on);
     });
   } else {
@@ -149,6 +149,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     $('#hero-hint').hidden = true;
   }
   if (matchMedia('(pointer: coarse)').matches) $('#hero-hint').textContent = 'Tahan paru-parunya, geser untuk memutar. Kumannya bisa diketuk.';
+  const heroStage = $('#hero-stage');
   $$('[data-focus]').forEach((a) => a.addEventListener('click', () => {
     const el = document.getElementById(a.dataset.focus);
     if (el && !el.disabled) setTimeout(() => el.focus({ preventScroll: true }), reduced ? 0 : 650);
@@ -190,6 +191,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
   stageNote.textContent = `Tahap ini: ${cfg.stage || 'penempatan panitia'}.${cfg.staffPending ? ' Penempatan staf menyusul.' : ''}`;
   const q = $('#q'), go = $('.lookup__go'), msg = $('#lookup-msg'), sug = $('#suggest'), cd = $('#countdown');
   const fmtDate = (ms) => new Date(ms).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
+  if (heroStage) heroStage.textContent = locked() ? 'Dibuka ' + fmtDate(announceAt) : 'Pengumuman sudah dibuka';
   if (locked()) {
     q.disabled = go.disabled = true;
     q.placeholder = 'Belum dibuka';
@@ -218,7 +220,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     const staffBlock = staf.length
       ? `<button class="staff-toggle" type="button" aria-expanded="false">Lihat ${staf.length} staf</button><ul class="staff" hidden>${staf.map((s) => `<li>${nameHTML(s)}</li>`).join('')}</ul>`
       : `<p class="staff-note">${cfg.staffPending ? 'Staf diumumkan menyusul' : 'Belum ada staf'}</p>`;
-    return `<article class="div" data-reveal data-names="${esc(all)}" style="--c:${c};--cfg:${cfg2}">
+    return `<article class="div glass" data-reveal data-names="${esc(all)}" style="--c:${c};--cfg:${cfg2}">
       <div class="div__top"><span class="div__no">${pad2(i + 1)}</span><span class="div__code">${esc(d.code)}</span></div>
       <h3 class="div__name">${esc(d.name)}${d.nick ? `<small>atau ${esc(d.nick)}</small>` : ''}</h3>
       <p class="div__blurb">${esc(d.blurb || '')}</p>
@@ -271,9 +273,9 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
   const links = data.links || {};
   const tile = (l, i) => {
     const k = pad2(i + 1), href = (l.href || '').trim();
-    if (!href) return `<div class="tile is-soon" aria-disabled="true"><span class="tile__k">${k}</span><span class="tile__t">${esc(l.title)}</span><span class="tile__d">${esc(l.desc || '')}</span><span class="tile__go">Menyusul</span></div>`;
+    if (!href) return `<div class="tile glass is-soon" aria-disabled="true"><span class="tile__k">${k}</span><span class="tile__t">${esc(l.title)}</span><span class="tile__d">${esc(l.desc || '')}</span><span class="tile__go">Menyusul</span></div>`;
     const ext = /^https?:/i.test(href), mail = /^mailto:/i.test(href);
-    return `<a class="tile" href="${esc(href)}"${ext ? ' target="_blank" rel="noopener"' : ''}><span class="tile__k">${k}</span><span class="tile__t">${esc(l.title)}</span><span class="tile__d">${esc(l.desc || '')}</span><span class="tile__go">${mail ? 'Tulis email' : ext ? 'Buka ↗' : 'Lihat'}</span></a>`;
+    return `<a class="tile glass" href="${esc(href)}"${ext ? ' target="_blank" rel="noopener"' : ''}><span class="tile__k">${k}</span><span class="tile__t">${esc(l.title)}</span><span class="tile__d">${esc(l.desc || '')}</span><span class="tile__go">${mail ? 'Tulis email' : ext ? 'Buka ↗' : 'Lihat'}</span></a>`;
   };
   $('#tp-divisi').innerHTML = (links.divisi || []).map(tile).join('');
   $('#tp-bph').innerHTML = (links.bph || []).map(tile).join('');
@@ -442,7 +444,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
       const b = breath.value, bb = Math.min(1, b);
       if (breath.label !== lastLabel) { lastLabel = breath.label; meterLabel.textContent = lastLabel; }
       meter.style.setProperty('--b', (0.45 + 0.55 * bb).toFixed(3));
-      if (window.scrollY < hero.offsetHeight + 40) {
+      if (html.classList.contains('no-gl') && window.scrollY < hero.offsetHeight + 40) {
         const t = now / 1000;
         letters.forEach((s, i) => {
           const w = WMIN + (WMAX - WMIN) * bb + (reduced ? 0 : Math.sin(t * 1.1 + i * 0.75) * 3);
@@ -458,11 +460,12 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     if (lenis()) lenis().stop();
     const hold = $('#hold'), fill = $('#hold-fill'), label = $('#hold-label'), hint = $('#gate-hint'), gateEl = $('#gate');
     const C = 289.03;
-    let holding = false, prog = 0, full = false, done = false, lastT = 0;
+    let holding = false, prog = 0, full = false, done = false, lastT = 0, holdStart = 0;
     const start = (e) => {
       if (done || holding) return;
       if (e && e.cancelable) e.preventDefault();
       holding = true;
+      holdStart = performance.now() - prog * 2200;
       breath.holding = true;
       hold.classList.add('is-holding');
       if (!full) label.textContent = 'Terus...';
@@ -506,6 +509,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
       const r = hold.getBoundingClientRect();
       wipe.style.setProperty('--wx', (r.left + r.width / 2).toFixed(0) + 'px');
       wipe.style.setProperty('--wy', (r.top + r.height / 2).toFixed(0) + 'px');
+      gateEl.classList.add('is-exhale');
       wipe.classList.add('is-on');
       setTimeout(() => {
         gateEl.classList.add('is-leaving');
@@ -520,7 +524,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
         const now = performance.now(), dt = Math.min(0.25, (now - (lastT || now)) / 1000);
         lastT = now;
         if (done) return;
-        if (holding) prog = Math.min(1, prog + dt / 2.2);
+        if (holding) prog = Math.min(1, (now - holdStart) / 2200);
         else if (!full) prog = Math.max(0, prog - dt * 1.6);
         if (prog >= 1 && !full) {
           full = true;
