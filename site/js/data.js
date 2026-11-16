@@ -27,8 +27,8 @@ window.POA = {
     { name: "Azallea Sofwa Betha Dyero", role: "" },
     { name: "Shabirah Daffa Ramadhani", role: "Sekretaris" },
     { name: "Raffa Gamadan Rifandi", role: "Sekretaris" },
-    { name: "Putri Kayla Effendi", role: "" },
-    { name: "Nailah Ansaria", role: "" }
+    { name: "Putri Kayla Effendi", role: "Bendahara" },
+    { name: "Nailah Ansaria", role: "Bendahara" }
   ],
 
   // koor = koordinator, wakoor = wakil koordinator, staf = daftar nama staf.
@@ -117,9 +117,9 @@ window.POA = {
       { title: "Grup LINE panitia", desc: "Info panitia dibagikan di sini.", href: "https://line.me/ti/g/C38QTYJKYD" }
     ],
     bph: [
-      { title: "Drive BPH", desc: "Folder kerja BPH.", href: "" },
+      { title: "Drive utama PoA 2026", desc: "Folder kerja utama panitia tahun ini.", href: "https://drive.google.com/drive/folders/1fkyquhKCc9Glid4rknA3G3LMTpfWZnVB" },
       { title: "Dokumentasi", desc: "Foto dan video selama persiapan sampai hari H.", href: "" },
-      { title: "Arsip PoA sebelumnya", desc: "Bahan referensi dari angkatan atas.", href: "" },
+      { title: "Arsip PoA 2025", desc: "Drive PoA tahun lalu, bahan referensi dari angkatan atas.", href: "https://drive.google.com/drive/folders/16cu4MUo_gqY5evWza5Bxn0CWCbYhkG5S" },
       { title: "Email PoA", desc: "pointofaction2026@gmail.com", href: "mailto:pointofaction2026@gmail.com" }
     ],
     sekretariatNote: "Proposal dan surat wajib lewat QC sekretaris dulu sebelum dikirim ke Sekretaris Umum BEM KM FK Unsri. Baca SOP sebelum pedoman.",
