@@ -214,6 +214,8 @@ export function initLanyard({ reduced }) {
   for (let i = 0; i <= N; i++) { P.push(new THREE.Vector3()); Q.push(new THREE.Vector3()); }
   let spin = 0, spinVel = 0, dragging = false, touched = false, acc = 0, t = 0;
   const target = new THREE.Vector3(), grab = new THREE.Vector3();
+  let confetti = null, confLive = false;
+  const conf = [], cm = new THREE.Matrix4(), cq = new THREE.Quaternion(), cs = new THREE.Vector3();
   const raycaster = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), ndc = new THREE.Vector2(), hitP = new THREE.Vector3();
 
   function setup() {
@@ -279,6 +281,19 @@ export function initLanyard({ reduced }) {
     strap.frustumCulled = false;
     scene.add(strap);
 
+    const CN = reduced ? 0 : 90;
+    if (CN) {
+      confetti = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.075, 0.13), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.5, metalness: 0.1 }), CN);
+      confetti.frustumCulled = false;
+      confetti.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      const cols = ['#E05744', '#FFC828', '#F96015', '#9ABC05', '#18542A', '#F3E8CC'].map((h) => new THREE.Color(h));
+      for (let i = 0; i < CN; i++) {
+        confetti.setColorAt(i, cols[i % cols.length]);
+        conf.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Euler(), w: new THREE.Vector3(), ph: Math.random() * 6.28, live: false });
+      }
+      scene.add(confetti);
+    }
+
     const toWorld = (e) => {
       const r = canvas.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -299,6 +314,37 @@ export function initLanyard({ reduced }) {
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('lostpointercapture', end);
+  }
+
+  function spawnConfetti() {
+    if (!confetti) return;
+    conf.forEach((c) => {
+      c.p.set((Math.random() - 0.5) * 4.6, 1.4 + Math.random() * 3.2, (Math.random() - 0.5) * 1.6);
+      c.v.set((Math.random() - 0.5) * 0.6, -(0.75 + Math.random() * 1.1), 0);
+      c.r.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+      c.w.set((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9, (Math.random() - 0.5) * 6);
+      c.live = true;
+    });
+    confLive = true;
+  }
+  function updConfetti(dt) {
+    if (!confetti || !confLive) return;
+    let any = false;
+    for (let i = 0; i < conf.length; i++) {
+      const c = conf[i];
+      if (c.live) {
+        c.p.x += (c.v.x + Math.sin(t * 2.2 + c.ph) * 0.35) * dt;
+        c.p.y += c.v.y * dt;
+        c.r.x += c.w.x * dt; c.r.y += c.w.y * dt; c.r.z += c.w.z * dt;
+        if (c.p.y < -2.8) c.live = false; else any = true;
+      }
+      cq.setFromEuler(c.r);
+      cs.setScalar(c.live ? 1 : 0);
+      cm.compose(c.p, cq, cs);
+      confetti.setMatrixAt(i, cm);
+    }
+    confetti.instanceMatrix.needsUpdate = true;
+    confLive = any;
   }
 
   function resetRope() {
@@ -396,6 +442,7 @@ export function initLanyard({ reduced }) {
       }
       frontTex.needsUpdate = true;
       resetRope();
+      spawnConfetti();
       W = H = 0;
       active = true;
     },
@@ -407,6 +454,7 @@ export function initLanyard({ reduced }) {
       acc = Math.min(acc + dt, 0.1);
       const h = 1 / 120;
       while (acc >= h) { step(h); acc -= h; }
+      updConfetti(dt);
       updateMeshes();
       renderer.render(scene, camera);
     },

@@ -158,6 +158,37 @@ export function initScene({ reduced }) {
   const burst = createBurst(60);
   scene.add(burst.mesh);
 
+  const shadowTex = (() => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const x = cv.getContext('2d');
+    const gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(14,27,18,0.55)');
+    gr.addColorStop(0.55, 'rgba(14,27,18,0.16)');
+    gr.addColorStop(1, 'rgba(14,27,18,0)');
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 128, 128);
+    const tx = new THREE.CanvasTexture(cv);
+    tx.colorSpace = THREE.SRGBColorSpace;
+    return tx;
+  })();
+  const mkShadow = () => {
+    const sm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, toneMapped: false }));
+    sm.renderOrder = -1;
+    sm.visible = false;
+    scene.add(sm);
+    return sm;
+  };
+  const shLungs = mkShadow(), shMask = mkShadow(), shSteth = mkShadow();
+  const rings = Array.from({ length: 6 }, () => {
+    const rm = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.5, 48), new THREE.MeshBasicMaterial({ color: PAL.sun, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+    rm.visible = false;
+    scene.add(rm);
+    return { m: rm, t: 1, s: 1 };
+  });
+  let ringCur = 0, hovered = null;
+  const shock = (p, sc) => { const r = rings[(ringCur = (ringCur + 1) % rings.length)]; r.m.position.copy(p); r.t = 0; r.s = sc; r.m.visible = true; };
+
   const slots = {};
   document.querySelectorAll('[data-slot]').forEach((el) => (slots[el.dataset.slot] = el));
 
@@ -249,7 +280,9 @@ export function initScene({ reduced }) {
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  let mode = document.documentElement.classList.contains('gated') ? 'gate' : 'hero';
+  const htmlEl = document.documentElement;
+  let mode = htmlEl.classList.contains('gated') ? 'gate' : 'hero';
+  let introT = mode === 'hero' && htmlEl.classList.contains('intro') ? -1 : 9;
   let trans = 0;
   const cur = { x: 0, y: 0, s: 1, ok: false };
   let xray = 0, xrayTarget = 0, rendered = false, hoverTick = 0;
@@ -273,48 +306,66 @@ export function initScene({ reduced }) {
         cur.x += (lr.cx - cur.x) * k; cur.y += (lr.cy - cur.y) * k; cur.s += (s - cur.s) * k;
         trans -= dt;
       }
-      lungs.root.visible = true;
+      const ik = introT < 0 ? 0 : 1 - Math.pow(1 - Math.min(1, introT / 1.7), 3);
+      if (introT >= 0 && introT < 9) introT += dt;
+      const hp = gated ? 0 : Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.9)));
+      const S = cur.s * (0.55 + 0.45 * ik) * (1 - hp * 0.12);
+      lungs.root.visible = introT >= 0;
       lungs.root.position.set(cur.x, cur.y, 0);
-      lungs.root.scale.setScalar(cur.s);
+      lungs.root.scale.setScalar(Math.max(0.0001, S));
       if (!drag) { yaw += yawVel; yawVel *= Math.pow(0.04, dt); }
       const sway = reduced ? 0 : Math.sin(t * 0.35) * 0.28;
-      lungs.root.rotation.set(0.05 - look.y * 0.12, yaw + sway + look.x * 0.22, 0);
+      lungs.root.rotation.set(0.05 - look.y * 0.12 + hp * 0.35, yaw + sway + look.x * 0.22 + hp * 1.3 - (1 - ik) * 1.2, 0);
+      shLungs.visible = lungs.root.visible;
+      shLungs.position.set(cur.x, cur.y - S * 2.05, -1.4);
+      shLungs.scale.set(S * 4.6, S * 1.0, 1);
+      shLungs.material.opacity = 0.5 * ik * (1 - hp);
       xray += (xrayTarget - xray) * (1 - Math.exp(-dt * 5));
       lungs.update(b, xray);
       air.mat.uniforms.uScale.value = renderer.getPixelRatio() * Math.min(1.6, cur.s * 1.25);
       air.update(reduced ? dt * 0.3 : dt, breath.delta);
       any = true;
-    } else lungs.root.visible = false;
+    } else { lungs.root.visible = false; shLungs.visible = false; }
 
     // mask
     const mr = gated ? null : readRect('mask');
     if (mr) {
       maskWrap.visible = true;
       maskWrap.position.set(mr.cx, mr.cy, 0);
-      maskWrap.scale.setScalar(fit(mr, mask.nh, mask.nw, 0.9));
+      const ms = fit(mr, mask.nh, mask.nw, 0.9);
+      maskWrap.scale.setScalar(ms);
+      shMask.visible = true;
+      shMask.position.set(mr.cx, mr.cy - ms * 0.95, -1);
+      shMask.scale.set(ms * 2.3, ms * 0.5, 1);
+      shMask.material.opacity = 0.45;
       maskPoke *= Math.pow(0.02, dt);
       const sw = reduced ? 0 : 1;
       mask.root.rotation.set(0.16 + Math.sin(t * 0.7) * 0.06 * sw - look.y * 0.15, 0.5 + Math.sin(t * 0.5) * 0.32 * sw + look.x * 0.3, Math.sin(t * 9) * 0.12 * maskPoke);
       mask.root.position.y = Math.sin(t * 1.1) * 0.05 * sw;
       mask.body.scale.z = 1 + 0.16 * (0.55 - Math.min(1, b)) + maskPoke * 0.25;
       any = true;
-    } else maskWrap.visible = false;
+    } else { maskWrap.visible = false; shMask.visible = false; }
 
     // stethoscope
     const sr = gated ? null : readRect('steth');
     if (sr) {
       stethWrap.visible = true;
       stethWrap.position.set(sr.cx, sr.cy, 0);
-      stethWrap.scale.setScalar(fit(sr, steth.nh, steth.nw, 0.92));
+      const ss = fit(sr, steth.nh, steth.nw, 0.92);
+      stethWrap.scale.setScalar(ss);
+      shSteth.visible = true;
+      shSteth.position.set(sr.cx, sr.cy - ss * 2.55, -1);
+      shSteth.scale.set(ss * 1.6, ss * 0.42, 1);
+      shSteth.material.opacity = 0.5;
       stethPoke *= Math.pow(0.03, dt);
       const sw = reduced ? 0 : 1;
       steth.root.rotation.set(-look.y * 0.12 + Math.sin(t * 0.6) * 0.05 * sw, Math.sin(t * 0.42) * 0.6 * sw + look.x * 0.35 + Math.sin(t * 7) * 0.3 * stethPoke, Math.sin(t * 0.8) * 0.08 * sw);
       steth.root.position.y = Math.sin(t * 0.9) * 0.06 * sw;
       any = true;
-    } else stethWrap.visible = false;
+    } else { stethWrap.visible = false; shSteth.visible = false; }
 
     // germs
-    rects.hero = lr && !gated ? lr : null;
+    rects.hero = lr && !gated && introT >= 0 ? lr : null;
     rects.germs = gated ? null : readRect('germs');
     for (const g of germs) {
       const r = rects[g.slot];
@@ -327,14 +378,16 @@ export function initScene({ reduced }) {
           g.popT += dt;
           const p = g.popT;
           s = p < 0.08 ? baseS * (1 + p * 5) : baseS * 1.4 * Math.max(0, 1 - (p - 0.08) / 0.14);
-          if (p > 0.08 && !g.burst) { g.burst = true; burst.emit(g.mesh.position, baseS); }
+          if (p > 0.08 && !g.burst) { g.burst = true; burst.emit(g.mesh.position, baseS); shock(g.mesh.position, baseS); }
           if (p > 0.22) { g.popT = -1; s = 0; }
         } else {
           s = 0;
           g.back -= dt;
           if (g.back <= 0) { g.alive = true; g.born = 0; g.burst = false; }
         }
-      } else if (g.born < 1) { g.born = Math.min(1, g.born + dt * 1.8); s = baseS * (1 - Math.pow(1 - g.born, 3)); }
+      } else if (g.born < 1) { g.born = Math.min(1, g.born + dt * 1.8); s = g.born <= 0 ? 0 : baseS * (1 - Math.pow(1 - g.born, 3)); }
+      g.hv = (g.hv || 0) + ((g === hovered ? 1 : 0) - (g.hv || 0)) * (1 - Math.exp(-dt * 10));
+      s *= 1 + 0.2 * g.hv;
       const sw = reduced ? 0.2 : 1;
       const bx = r.cx + g.spot[0] * r.hw * 0.92 + Math.sin(t * 0.7 + g.phase) * diam * 0.5 * sw;
       const by = r.cy + g.spot[1] * r.hh * 0.86 + Math.cos(t * 0.9 + g.phase * 1.3) * diam * 0.5 * sw;
@@ -342,20 +395,29 @@ export function initScene({ reduced }) {
       if (d < R && d > 0.0001 && pointerSeen) { const f = ((R - d) / R) * diam * 0.25; g.push.x += (dx / d) * f; g.push.y += (dy / d) * f; }
       g.push.multiplyScalar(Math.pow(0.15, dt));
       g.mesh.position.set(bx + g.push.x, by + g.push.y, 0.6);
-      g.mesh.rotation.x += g.spin.x * dt * sw;
-      g.mesh.rotation.y += g.spin.y * dt * sw;
-      g.mesh.rotation.z += g.spin.z * dt * sw;
+      const spinK = sw * (1 + 3 * g.hv);
+      g.mesh.rotation.x += g.spin.x * dt * spinK;
+      g.mesh.rotation.y += g.spin.y * dt * spinK;
+      g.mesh.rotation.z += g.spin.z * dt * spinK;
       g.mesh.scale.setScalar(Math.max(0.0001, s));
       g.mesh.visible = s > 0.001;
       if (g.mesh.visible) any = true;
     }
     if (burst.update(dt)) any = true;
+    for (const r of rings) {
+      if (r.t >= 1) { if (r.m.visible) r.m.visible = false; continue; }
+      r.t = Math.min(1, r.t + dt / 0.5);
+      r.m.scale.setScalar(r.s * (0.6 + 2.6 * (1 - Math.pow(1 - r.t, 3))));
+      r.m.material.opacity = 0.9 * (1 - r.t);
+      any = true;
+    }
 
     // hover cursor for mouse users
     if (pointerSeen && ++hoverTick % 4 === 0) {
       raycaster.setFromCamera(ndc, camera);
-      const h = raycaster.intersectObjects(targets(), false).length > 0;
-      document.documentElement.classList.toggle('hover-3d', h);
+      const hh = raycaster.intersectObjects(targets(), false)[0];
+      hovered = hh && hh.object.userData.germ ? hh.object.userData.germ : null;
+      document.documentElement.classList.toggle('hover-3d', !!hh);
     }
 
     if (any || rendered) {
@@ -367,6 +429,10 @@ export function initScene({ reduced }) {
   return {
     frame,
     setXray(on) { xrayTarget = on ? 1 : 0; },
-    leaveGate() { mode = 'hero'; trans = 1.4; },
+    leaveGate(instant) { mode = 'hero'; trans = instant ? 0 : 1.4; if (instant) cur.ok = false; },
+    intro() {
+      introT = 0;
+      germs.forEach((g) => { if (g.slot === 'hero') { g.born = -0.5 - Math.random() * 0.6; } });
+    },
   };
 }

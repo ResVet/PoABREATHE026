@@ -72,7 +72,8 @@ function tracePath(w = 520, h = 44) {
   return d;
 }
 
-export function initUI({ data, scene, lanyard, reduced }) {
+export function initUI({ data, scene, lanyard, reduced, fx }) {
+  const lenis = () => window.__lenis || null;
   const cfg = data.config || {};
   const html = document.documentElement;
   const people = buildPeople(data);
@@ -382,13 +383,17 @@ export function initUI({ data, scene, lanyard, reduced }) {
     lastFocus = document.activeElement;
     modal.hidden = false;
     html.classList.add('modal-open');
+    if (lenis()) lenis().stop();
+    requestAnimationFrame(() => { modal.classList.add('is-open'); if (fx) fx.replay($('.modal__yay')); });
     lanyard.open(p);
     setTimeout(() => $('.modal__x', modal).focus({ preventScroll: true }), 30);
   }
   function closeResult() {
     if (modal.hidden) return;
     modal.hidden = true;
+    modal.classList.remove('is-open');
     html.classList.remove('modal-open');
+    if (lenis()) lenis().start();
     lanyard.close();
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
   }
@@ -450,6 +455,7 @@ export function initUI({ data, scene, lanyard, reduced }) {
   function initGate() {
     const idle = { frame() {} };
     if (!html.classList.contains('gated')) return idle;
+    if (lenis()) lenis().stop();
     const hold = $('#hold'), fill = $('#hold-fill'), label = $('#hold-label'), hint = $('#gate-hint'), gateEl = $('#gate');
     const C = 289.03;
     let holding = false, prog = 0, full = false, done = false, lastT = 0;
@@ -483,15 +489,31 @@ export function initUI({ data, scene, lanyard, reduced }) {
       breath.holding = false;
       try { localStorage.setItem('poa26-gate', '1'); } catch (e) { /* private mode */ }
       label.textContent = 'Hembuskan';
-      gateEl.classList.add('is-leaving');
-      if (scene) scene.leaveGate();
-      setTimeout(() => {
+      const finish = () => {
         html.classList.remove('gated');
-        html.classList.add('entering');
         window.scrollTo(0, 0);
         fitWordmark();
-        setTimeout(() => html.classList.remove('entering'), 1100);
-      }, animated ? 650 : 0);
+        if (lenis()) lenis().start();
+        if (fx) fx.runIntro();
+      };
+      const wipe = $('#wipe');
+      if (!animated || reduced || !wipe) {
+        gateEl.classList.add('is-leaving');
+        if (scene) scene.leaveGate(false);
+        setTimeout(finish, animated ? 600 : 0);
+        return;
+      }
+      const r = hold.getBoundingClientRect();
+      wipe.style.setProperty('--wx', (r.left + r.width / 2).toFixed(0) + 'px');
+      wipe.style.setProperty('--wy', (r.top + r.height / 2).toFixed(0) + 'px');
+      wipe.classList.add('is-on');
+      setTimeout(() => {
+        gateEl.classList.add('is-leaving');
+        if (scene) scene.leaveGate(true);
+        finish();
+        requestAnimationFrame(() => wipe.classList.add('is-out'));
+      }, 900);
+      setTimeout(() => wipe.classList.remove('is-on', 'is-out'), 2100);
     }
     return {
       frame() {

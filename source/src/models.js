@@ -161,6 +161,17 @@ export function createLungs({ detail = 32 } = {}) {
     vertexColors: true, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.35,
     sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0xffc2a8), transparent: true,
   });
+  const uniforms = { uBreath: { value: 0 }, uRim: { value: new THREE.Color(0xffa58c) } };
+  lungMat.onBeforeCompile = (sh) => {
+    sh.uniforms.uBreath = uniforms.uBreath;
+    sh.uniforms.uRim = uniforms.uRim;
+    sh.vertexShader = 'uniform float uBreath;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      float wB = (1.0 - smoothstep(-1.25, 1.45, position.y)) * (0.55 + 0.45 * smoothstep(-0.6, 0.9, position.x));
+      transformed += objectNormal * (uBreath * 0.075 * wB);`);
+    sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 2.4);
+      totalEmissiveRadiance += uRim * fres * 0.42;`);
+  };
   const treeMat = new THREE.MeshStandardMaterial({ color: PAL.sun, roughness: 0.35, emissive: PAL.carrot, emissiveIntensity: 0.15 });
   const cartMat = new THREE.MeshPhysicalMaterial({ color: 0xf1e4d0, roughness: 0.45, clearcoat: 0.25, sheen: 0.5, sheenColor: new THREE.Color(0xffffff) });
 
@@ -182,7 +193,8 @@ export function createLungs({ detail = 32 } = {}) {
     root, nh: 3.85, nw: 4.2,
     top: new V(0, 2.35 - 0.47, 0),
     update(b, xray) {
-      const sx = 1 + 0.055 * b, sy = 1 + 0.03 * b, sz = 1 + 0.05 * b;
+      uniforms.uBreath.value = b;
+      const sx = 1 + 0.02 * b, sy = 1 + 0.012 * b, sz = 1 + 0.02 * b;
       lungA.scale.set(-sx, sy, sz);
       lungB.scale.set(sx, sy, sz);
       lungA.position.y = lungB.position.y = -0.035 * b;
@@ -288,6 +300,11 @@ export function createMask() {
   const edgeMat = new THREE.MeshPhysicalMaterial({ color: 0xece2cc, roughness: 0.8, sheen: 0.6 });
   root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(perim, true), 260, 0.017, 6, true), edgeMat));
 
+  const wire = [];
+  for (let ix = 30; ix <= 60; ix += 3) { const v = at(ix, 1); v.z += 0.014; wire.push(v); }
+  const wireG = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(wire), 40, 0.011, 6);
+  wireG.scale(1, 0.6, 1);
+  root.add(new THREE.Mesh(wireG, new THREE.MeshStandardMaterial({ color: 0xe9e6de, metalness: 0.35, roughness: 0.45 })));
   const loopMat = new THREE.MeshPhysicalMaterial({ color: PAL.sun, roughness: 0.55, sheen: 0.4 });
   for (const sd of [-1, 1]) {
     const ix = sd > 0 ? WS : 0;
