@@ -1,0 +1,12 @@
+{
+  "name": "poabreathe2026",
+  "private": true,
+  "description": "Kode sumber situs PoA BREATHE 2026",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=esm --target=es2020,safari14.1 --legal-comments=none --outfile=../site/js/app.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}
