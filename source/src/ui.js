@@ -29,7 +29,7 @@ function buildPeople(data) {
     const add = (name, role, kind) => { if (name && String(name).trim()) out.push({ name: String(name).trim(), role, group: `Divisi ${d.name}`, color: d.color, id: `${d.code}-${pad2(n++)}`, kind }); };
     add(d.koor, 'Koordinator', 'koor');
     add(d.wakoor, 'Wakil Koordinator', 'wakoor');
-    (d.staf || []).forEach((s) => add(s, 'Staf', 'staf'));
+    (d.staf || []).forEach((s) => add(s, 'Anggota', 'staf'));
   });
   const aliases = data.aliases || {};
   out.forEach((p) => {
@@ -44,8 +44,13 @@ function search(people, q) {
   if (!qt.length || qt.join('').length < 2) return { type: 'none', list: [] };
   const qs = qt.join(' ');
   const exact = people.filter((p) => p.flat.includes(qs));
-  if (exact.length) return { type: exact.length === 1 ? 'exact' : 'multi', list: exact };
   const pref = people.filter((p) => p.keys.some((k) => qt.every((t) => k.some((w) => w.startsWith(t)))));
+  // Satu kata seperti "Nabila" bisa milik beberapa orang, jadi tetap tampilkan pilihan.
+  if (exact.length === 1 && qt.length === 1 && pref.length > 1) {
+    const rest = pref.filter((p) => p !== exact[0]).sort((a, b) => a.name.length - b.name.length);
+    return { type: 'multi', list: [exact[0], ...rest].slice(0, 8) };
+  }
+  if (exact.length) return { type: exact.length === 1 ? 'exact' : 'multi', list: exact };
   if (pref.length) {
     pref.sort((a, b) => a.name.length - b.name.length);
     return { type: pref.length === 1 && qt.length >= 2 ? 'exact' : 'multi', list: pref.slice(0, 8) };
@@ -188,7 +193,9 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
 
   /* stage note + lock */
   const stageNote = $('#stage-note');
-  stageNote.textContent = `Tahap ini: ${cfg.stage || 'penempatan panitia'}.${cfg.staffPending ? ' Penempatan staf menyusul.' : ''}`;
+  stageNote.textContent = cfg.staffPending
+    ? `Tahap ini: ${cfg.stage || 'penempatan panitia'}. Penempatan anggota menyusul.`
+    : `${cfg.stage || 'Susunan lengkap panitia'}.`;
   const q = $('#q'), go = $('.lookup__go'), msg = $('#lookup-msg'), sug = $('#suggest'), cd = $('#countdown');
   const fmtDate = (ms) => new Date(ms).toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
   if (heroStage) heroStage.textContent = locked() ? 'Dibuka ' + fmtDate(announceAt) : 'Pengumuman sudah dibuka';
@@ -218,8 +225,8 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     const staf = d.staf || [];
     const all = [d.koor, d.wakoor, ...staf].filter(Boolean).map(norm).join('|');
     const staffBlock = staf.length
-      ? `<button class="staff-toggle" type="button" aria-expanded="false">Lihat ${staf.length} staf</button><ul class="staff" hidden>${staf.map((s) => `<li>${nameHTML(s)}</li>`).join('')}</ul>`
-      : `<p class="staff-note">${cfg.staffPending ? 'Staf diumumkan menyusul' : 'Belum ada staf'}</p>`;
+      ? `<button class="staff-toggle" type="button" aria-expanded="false">Lihat ${staf.length} anggota</button><ul class="staff" hidden>${staf.map((s) => `<li>${nameHTML(s)}</li>`).join('')}</ul>`
+      : `<p class="staff-note">${cfg.staffPending ? 'Anggota diumumkan menyusul' : 'Belum ada anggota'}</p>`;
     return `<article class="div glass" data-reveal data-names="${esc(all)}" style="--c:${c};--cfg:${cfg2}">
       <div class="div__top"><span class="div__no">${pad2(i + 1)}</span><span class="div__code">${esc(d.code)}</span></div>
       <h3 class="div__name">${esc(d.name)}${d.nick ? `<small>atau ${esc(d.nick)}</small>` : ''}</h3>
@@ -235,9 +242,9 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     const list = b.nextElementSibling, open = list.hidden;
     list.hidden = !open;
     b.setAttribute('aria-expanded', String(open));
-    b.textContent = open ? 'Sembunyikan staf' : `Lihat ${list.children.length} staf`;
+    b.textContent = open ? 'Sembunyikan anggota' : `Lihat ${list.children.length} anggota`;
   });
-  const total = people.length;
+  const total = new Set(people.map((p) => norm(p.name))).size;
   rosterCount.textContent = locked() ? 'Nama tampil saat pengumuman dibuka' : `${total} nama terdaftar`;
   const highlight = (root, nq) => {
     $$('.nm', root).forEach((el) => {
@@ -360,7 +367,7 @@ export function initUI({ data, scene, lanyard, reduced, fx }) {
     if (r.type === 'multi') { msg.innerHTML = `<strong>Ada ${r.list.length > 1 ? 'beberapa nama' : 'nama'} yang cocok.</strong> Kamu yang mana?${pickList(r.list)}`; return; }
     if (r.type === 'fuzzy') { msg.innerHTML = `<strong>Belum ketemu yang persis.</strong> Mungkin maksudmu:${pickList(r.list)}`; return; }
     msg.textContent = cfg.staffPending
-      ? `Nama ini belum ada di daftar tahap ini (${String(cfg.stage || '').toLowerCase()}). Kalau kamu daftar sebagai staf, tunggu pengumuman berikutnya di grup LINE.`
+      ? `Nama ini belum ada di daftar tahap ini (${String(cfg.stage || '').toLowerCase()}). Kalau kamu daftar sebagai anggota divisi, tunggu pengumuman berikutnya di grup LINE.`
       : 'Nama ini belum ketemu. Coba tulis nama lengkap sesuai form, atau tanya BPH di grup LINE.';
   });
 

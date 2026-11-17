@@ -388,7 +388,7 @@ html.reduced .wipe{display:none}
 }
 
 /* responsive */
-@media (max-width:1180px){.index{display:none}}
+@media (max-width:1380px){.index{display:none}}
 @media (max-width:980px){
   .hero__foot{grid-template-columns:1fr;gap:22px}
   .cue{display:none}
