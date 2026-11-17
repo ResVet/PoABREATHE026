@@ -268,7 +268,6 @@ window.POA = {
         "Zivanna Khalesya",
         "Nur Nazilah",
         "Claresta Nur Salsabila Adijaya",
-        "M. Jethro Keylas Wibiksono",
         "Zahra Lutfiyah Shakila",
         "Fabian Alifea Priyandra",
         "Norbert Samuel Partogi Napitupulu",
