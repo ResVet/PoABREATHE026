@@ -202,7 +202,6 @@ window.POA = {
         "Annisa Shafira Alfarizi",
         "Zalika Lutfiyah Shakila",
         "Sheila Anggiani",
-        "Nur Nazilah",
         "Regina",
         "Piona",
         "Siti Aisyah Maharani",
