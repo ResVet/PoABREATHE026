@@ -223,7 +223,8 @@ window.POA = {
         "Annisa Ghaniyyah Alimah",
         "Keyzel Tania Aurora",
         "Angelica Fransisca Azalea",
-        "M. Jethro Keylas Wibiksono"
+        "M. Jethro Keylas Wibiksono",
+        "Naila Saabirah"
       ]
     },
     {
